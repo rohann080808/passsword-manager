@@ -1,0 +1,102 @@
+import hashlib
+import hmac
+import secrets
+
+# Function to generate a random salt
+def generate_salt():
+    return secrets.token_bytes(16)
+
+# Function to hash a password with salt
+def hash_password(password, salt):
+    return hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
+
+# Function to create a new user
+def create_user(username, password):
+    salt = generate_salt()
+    hashed_password = hash_password(password, salt)
+    with open('users.txt', 'a') as file:
+        file.write(f'{username}:{salt.hex()}:{hashed_password.hex()}\n')
+
+# Function to authenticate a user
+def authenticate(username, password):
+    with open('users.txt', 'r') as file:
+        for line in file:
+            stored_username, stored_salt, stored_hash = line.strip().split(':')
+            if stored_username == username:
+                salt = bytes.fromhex(stored_salt)
+                hashed_password = hash_password(password, salt).hex()
+                if hmac.compare_digest(hashed_password, stored_hash):
+                    return True
+    return False
+
+# Function to store a password
+def store_password(username, service, password):
+    with open(f'{username}_passwords.txt', 'a') as file:
+        file.write(f'{service}:{password}\n')
+
+# Function to retrieve a password
+def retrieve_password(username, service):
+    with open(f'{username}_passwords.txt', 'r') as file:
+        for line in file:
+            stored_service, stored_password = line.strip().split(':')
+            if stored_service == service:
+                return stored_password
+    return None
+
+# Function to assess password strength
+def assess_password_strength(password):
+    # Implement your password strength assessment logic here
+    return True
+
+# Main function
+def main():
+    while True:
+        print("\n1. Create User")
+        print("2. Authenticate User")
+        print("3. Store Password")
+        print("4. Retrieve Password")
+        print("5. Exit")
+        choice = input("Enter your choice: ")
+
+        if choice == '1':
+            username = input("Enter username: ")
+            password = input("Enter password: ")
+            if assess_password_strength(password):
+                create_user(username, password)
+                print("User created successfully!")
+            else:
+                print("Password does not meet the strength requirements.")
+
+        elif choice == '2':
+            username = input("Enter username: ")
+            password = input("Enter password: ")
+            if authenticate(username, password):
+                print("Authentication successful!")
+            else:
+                print("Authentication failed.")
+
+        elif choice == '3':
+            username = input("Enter username: ")
+            service = input("Enter service: ")
+            password = input("Enter password: ")
+            store_password(username, service, password)
+            print("Password stored successfully!")
+
+        elif choice == '4':
+            username = input("Enter username: ")
+            service = input("Enter service: ")
+            password = retrieve_password(username, service)
+            if password:
+                print(f"Retrieved password for {service}: {password}")
+            else:
+                print("Password not found.")
+
+        elif choice == '5':
+            break
+
+        else:
+            print("Invalid choice. Please try again.")
+
+if __name__ == "__main__":
+    main()
+
